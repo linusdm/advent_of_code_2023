@@ -1,0 +1,62 @@
+# Day 1: Trebuchet?!
+
+## Part one
+
+```elixir
+Path.join(__DIR__, "day-1.input")
+|> File.stream!()
+|> Stream.map(fn line ->
+  digits_only = Regex.replace(~r/\D/, line, "")
+
+  first = digits_only |> String.first()
+  last = digits_only |> String.last()
+
+  (first <> last) |> String.to_integer()
+end)
+|> Enum.sum()
+```
+
+## Part two
+
+```elixir
+defmodule LineParser do
+  def parse_line(acc \\ [], line)
+  def parse_line(acc, ""), do: Enum.reverse(acc)
+
+  def parse_line(acc, <<_::utf8>> <> rest = line) do
+    case line do
+      <<c::utf8>> <> _ when c >= ?0 and c <= ?9 -> [String.to_integer(<<c>>) | acc]
+      "zero" <> _ -> [0 | acc]
+      "one" <> _ -> [1 | acc]
+      "two" <> _ -> [2 | acc]
+      "three" <> _ -> [3 | acc]
+      "four" <> _ -> [4 | acc]
+      "five" <> _ -> [5 | acc]
+      "six" <> _ -> [6 | acc]
+      "seven" <> _ -> [7 | acc]
+      "eight" <> _ -> [8 | acc]
+      "nine" <> _ -> [9 | acc]
+      _ -> acc
+    end
+    |> parse_line(rest)
+  end
+end
+```
+
+```elixir
+LineParser.parse_line("xtwone3four")
+```
+
+```elixir
+Path.join(__DIR__, "day-1.input")
+|> File.stream!()
+|> Stream.map(fn line ->
+  digits_only = LineParser.parse_line(line)
+
+  first = digits_only |> hd()
+  last = digits_only |> List.last()
+
+  "#{first}#{last}" |> String.to_integer()
+end)
+|> Enum.sum()
+```
