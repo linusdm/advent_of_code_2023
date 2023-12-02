@@ -11,7 +11,7 @@ defmodule DrawsParser do
   @colors ~w(red green blue)a
 
   def parse_line(line) do
-    ["Game " <> game_string | draws] = Regex.split(~r/:|;/, line, trim: true)
+    ["Game " <> game_string | draws] = Regex.split(~r/:|;/, line)
 
     draws =
       draws
@@ -67,6 +67,8 @@ example_input
 |> Enum.filter(&DrawsParser.is_possible_given(&1, red: 12, green: 13, blue: 14))
 |> Stream.map(& &1.game)
 |> Enum.sum()
+
+# should be 8
 ```
 
 ```elixir
@@ -87,6 +89,8 @@ example_input
 |> Stream.map(&DrawsParser.minimum_set_of/1)
 |> Stream.map(&DrawsParser.power_of/1)
 |> Enum.sum()
+
+# should be 2286
 ```
 
 ```elixir
