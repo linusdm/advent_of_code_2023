@@ -1,0 +1,103 @@
+# Day 3: Gear Ratios
+
+## Part one
+
+```elixir
+sample_input =
+  """
+  467..114..
+  ...*......
+  ..35..633.
+  ......#...
+  617*......
+  .....+.58.
+  ..592.....
+  ......755.
+  ...$.*....
+  .664.598..
+  """
+```
+
+```elixir
+defmodule GearRatios do
+  def sum_part_numbers(schematic) do
+    symbol_positions = extract_symbol_positions(schematic)
+
+    for {number, _from, _to} = number_area <- extract_number_areas(schematic),
+        touches_one_of?(number_area, symbol_positions),
+        reduce: 0 do
+      acc -> acc + number
+    end
+  end
+
+  @digits 0..9 |> Enum.map(&"#{&1}")
+
+  def extract_number_areas(schematic) do
+    schematic
+    |> String.split("\n", trim: true)
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {line, row} ->
+      line
+      |> String.split("", trim: true)
+      |> Enum.with_index()
+      |> Enum.reduce({[], :closed}, fn
+        {c, _}, {acc, :closed} when c not in @digits ->
+          {acc, :closed}
+
+        {c, idx}, {acc, :open, from, builder} when c not in @digits ->
+          {[{builder, from, idx - 1} | acc], :closed}
+
+        {digit, idx}, {acc, :closed} when digit in @digits ->
+          {acc, :open, idx, digit}
+
+        {digit, _}, {acc, :open, from, builder} when digit in @digits ->
+          {acc, :open, from, builder <> digit}
+      end)
+      |> case do
+        {acc, :open, from, builder} -> [{builder, from, String.length(line) - 1} | acc]
+        {acc, :closed} -> acc
+      end
+      |> Enum.map(fn {digit_as_string, from_col, to_col} ->
+        {digit_as_string |> String.to_integer(), {row, from_col}, {row, to_col}}
+      end)
+    end)
+  end
+
+  def extract_symbol_positions(schematic) do
+    schematic
+    |> String.split("\n", trim: true)
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {line, row} ->
+      line
+      |> String.split("", trim: true)
+      |> Enum.with_index()
+      |> Enum.reduce([], fn
+        {c, idx}, acc when c not in @digits and c != "." -> [{c, {row, idx}} | acc]
+        _, acc -> acc
+      end)
+    end)
+  end
+
+  defp touches_one_of?(number_area, symbol_positions),
+    do: Enum.any?(symbol_positions, &touch?(&1, number_area))
+
+  defp touch?({_, {symbol_row, symbol_col}}, {_, {from_row, from_col}, {to_row, to_col}}) do
+    symbol_row in (from_row - 1)..(to_row + 1) and symbol_col in (from_col - 1)..(to_col + 1)
+  end
+end
+```
+
+```elixir
+GearRatios.sum_part_numbers(sample_input)
+# expect 4361
+```
+
+```elixir
+Path.join(__DIR__, "day-3.input")
+|> File.read!()
+|> GearRatios.sum_part_numbers()
+
+# 525119
+```
+
+## Part two
