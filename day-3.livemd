@@ -51,30 +51,23 @@ defmodule GearRatios do
       line
       |> String.split("", trim: true)
       |> Enum.with_index()
-      |> Enum.reduce({[], :closed}, fn
-        {c, _}, {acc, :closed} when c not in @digits ->
-          {acc, :closed}
-
-        {c, idx}, {acc, :open, from, builder} when c not in @digits ->
-          {[{builder, from, idx - 1} | acc], :closed}
-
-        {digit, idx}, {acc, :closed} when digit in @digits ->
-          {acc, :open, idx, digit}
-
-        {digit, _}, {acc, :open, from, builder} when digit in @digits ->
-          {acc, :open, from, builder <> digit}
-      end)
-      |> case do
-        {acc, :open, from, builder} -> [{builder, from, String.length(line) - 1} | acc]
-        {acc, :closed} -> acc
-      end
-      |> Enum.map(fn {digit_as_string, from_col, to_col} ->
-        {digit_as_string |> String.to_integer(), {row, from_col}, {row, to_col}}
+      |> Enum.chunk_by(&(elem(&1, 0) in @digits))
+      |> Enum.filter(fn [{first_char, _} | _] -> first_char in @digits end)
+      |> Enum.map(fn [{_, first_col} | _] = chunk ->
+        {_, last_col} = List.last(chunk)
+        number = chunk |> Enum.map(&elem(&1, 0)) |> Enum.join() |> String.to_integer()
+        {number, {row, first_col}, {row, last_col}}
       end)
     end)
   end
 
-  defp extract_symbol_positions(schematic) do
+  defp extract_gear_positions(schematic),
+    do: extract_positions(schematic, &(&1 == "*"))
+
+  defp extract_symbol_positions(schematic),
+    do: extract_positions(schematic, &(&1 not in ["." | @digits]))
+
+  defp extract_positions(schematic, allowed_char_fn?) do
     schematic
     |> String.split("\n", trim: true)
     |> Enum.with_index()
@@ -82,9 +75,12 @@ defmodule GearRatios do
       line
       |> String.split("", trim: true)
       |> Enum.with_index()
-      |> Enum.reduce([], fn
-        {c, idx}, acc when c not in @digits and c != "." -> [{c, {row, idx}} | acc]
-        _, acc -> acc
+      |> Enum.reduce([], fn {c, idx}, acc ->
+        if allowed_char_fn?.(c) do
+          [{c, {row, idx}} | acc]
+        else
+          acc
+        end
       end)
     end)
   end
@@ -98,21 +94,6 @@ defmodule GearRatios do
     symbol_row in (from_row - 1)..(to_row + 1) and symbol_col in (from_col - 1)..(to_col + 1)
   end
 
-  defp extract_gear_positions(schematic) do
-    schematic
-    |> String.split("\n", trim: true)
-    |> Enum.with_index()
-    |> Enum.flat_map(fn {line, row} ->
-      line
-      |> String.split("", trim: true)
-      |> Enum.with_index()
-      |> Enum.reduce([], fn
-        {c, idx}, acc when c == "*" -> [{c, {row, idx}} | acc]
-        _, acc -> acc
-      end)
-    end)
-  end
-
   defp get_gear_ratio(gear_position, number_areas) do
     number_areas
     |> filter_adjacent_to(gear_position)
@@ -122,7 +103,7 @@ defmodule GearRatios do
     end
   end
 
-  defp filter_adjacent_to(areas, position), do: areas |> Enum.filter(&touch?(position, &1))
+  defp filter_adjacent_to(areas, position), do: Enum.filter(areas, &touch?(position, &1))
 end
 ```
 
