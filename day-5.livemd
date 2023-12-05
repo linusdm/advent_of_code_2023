@@ -1,0 +1,138 @@
+# Day 5: If You Give A Seed A Fertilizer
+
+## Part one
+
+```elixir
+sample_input =
+  """
+  seeds: 79 14 55 13
+
+  seed-to-soil map:
+  50 98 2
+  52 50 48
+
+  soil-to-fertilizer map:
+  0 15 37
+  37 52 2
+  39 0 15
+
+  fertilizer-to-water map:
+  49 53 8
+  0 11 42
+  42 0 7
+  57 7 4
+
+  water-to-light map:
+  88 18 7
+  18 25 70
+
+  light-to-temperature map:
+  45 77 23
+  81 45 19
+  68 64 13
+
+  temperature-to-humidity map:
+  0 69 1
+  1 0 69
+
+  humidity-to-location map:
+  60 56 37
+  56 93 4
+  """
+```
+
+```elixir
+defmodule SeedToLocation do
+  def find_lowest_locations(input, mode) when mode in [:seeds_as_is, :seeds_as_ranges] do
+    [seeds_block | mapping_blocks] = String.split(input, "\n\n", trim: true)
+
+    finder_fn = create_location_finder(mapping_blocks)
+
+    seeds_block
+    |> parse_seeds(mode)
+    |> Enum.map(&finder_fn.(&1))
+    |> Enum.min()
+  end
+
+  defp create_location_finder(blocks) do
+    mappers = Enum.map(blocks, &create_mapper/1)
+
+    fn seed ->
+      for mapper <- mappers, reduce: seed do
+        acc -> mapper.(acc)
+      end
+    end
+  end
+
+  defp create_mapper(block) do
+    [_preamble | rules] = String.split(block, "\n", trim: true)
+
+    rules =
+      Enum.map(rules, fn rule ->
+        [dest_start, src_start, length] = parse_numbers(rule)
+        # create a map with ranges as keys, and an offset as value
+        # e.g. %{98..99 => -48, 50..97 => 2, ...}
+        {src_start..(src_start + length - 1), dest_start - src_start}
+      end)
+      |> Enum.into(%{})
+
+    fn
+      input when is_integer(input) ->
+        case Enum.filter(rules, fn {range, _} -> input in range end) do
+          [] -> input
+          [{_, offset}] -> input + offset
+        end
+
+      %Range{} = _input ->
+        # TODO doesn't work yet
+        0
+    end
+  end
+
+  defp parse_seeds("seeds: " <> fragment, :seeds_as_is), do: parse_numbers(fragment)
+
+  defp parse_seeds(fragment, :seeds_as_ranges) do
+    fragment
+    |> parse_seeds(:seeds_as_is)
+    |> Enum.chunk_every(2)
+    # |> Enum.map(fn [start, length] ->
+    #   start..(start + length - 1)
+    # end)
+    |> Enum.flat_map(fn [start, length] ->
+      start..(start + length - 1) |> Enum.to_list()
+    end)
+  end
+
+  defp parse_numbers(fragment) do
+    String.split(fragment) |> Enum.map(&String.to_integer/1)
+  end
+end
+```
+
+```elixir
+SeedToLocation.find_lowest_locations(sample_input, :seeds_as_is)
+# expect 35
+```
+
+```elixir
+Path.join(__DIR__, "day-5.input")
+|> File.read!()
+|> SeedToLocation.find_lowest_locations(:seeds_as_is)
+
+# 174137457
+```
+
+## Part two
+
+```elixir
+SeedToLocation.find_lowest_locations(sample_input, :seeds_as_ranges)
+# expect 46
+```
+
+```elixir
+Path.join(__DIR__, "day-5.input")
+|> File.read!()
+|> SeedToLocation.find_lowest_locations(:seeds_as_ranges)
+
+# TODO this takes forever (no result yet)!
+```
