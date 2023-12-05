@@ -18,18 +18,47 @@ sample_input =
 defmodule Scratchcards do
   def count_points(input) do
     input
+    |> number_of_matches_per_card()
+    |> Enum.map(fn
+      0 -> 0
+      number_of_matches -> Integer.pow(2, number_of_matches - 1)
+    end)
+    |> Enum.sum()
+  end
+
+  def count_scratchcards(input) do
+    input
+    |> number_of_matches_per_card()
+    |> Enum.with_index(1)
+    |> Enum.reduce(%{}, fn
+      {matches, index}, acc ->
+        acc = Map.update(acc, index, 1, &(&1 + 1))
+
+        if matches == 0 do
+          acc
+        else
+          amount = Map.get(acc, index, 0)
+
+          (index + 1)..(index + matches)
+          |> Enum.reduce(acc, fn card_nr, acc ->
+            Map.update(acc, card_nr, amount, &(&1 + amount))
+          end)
+        end
+    end)
+    |> Map.values()
+    |> Enum.sum()
+  end
+
+  defp number_of_matches_per_card(input) do
+    input
     |> String.split("\n", trim: true)
     |> Enum.map(fn line ->
       [_, winning_numbers, own_numbers] = Regex.split(~r/:|\|/, line)
       winning_numbers = string_to_list_of_numbers(winning_numbers)
       own_numbers = string_to_list_of_numbers(own_numbers)
 
-      case MapSet.intersection(winning_numbers, own_numbers) |> Enum.count() do
-        0 -> 0
-        count -> Integer.pow(2, count - 1)
-      end
+      MapSet.intersection(winning_numbers, own_numbers) |> Enum.count()
     end)
-    |> Enum.sum()
   end
 
   defp string_to_list_of_numbers(string) do
@@ -49,4 +78,19 @@ Path.join(__DIR__, "day-4.input")
 |> Scratchcards.count_points()
 
 # 20829
+```
+
+## Part two
+
+```elixir
+Scratchcards.count_scratchcards(sample_input)
+# 30
+```
+
+```elixir
+Path.join(__DIR__, "day-4.input")
+|> File.read!()
+|> Scratchcards.count_scratchcards()
+
+# 12648035
 ```
