@@ -1,0 +1,27 @@
+# Day 6: Wait For It
+
+## Part one
+
+```elixir
+defmodule WaitForIt do
+  def number_of_ways_to_beat_multiplied(races) do
+    races
+    |> Enum.map(fn [time, distance] -> number_of_ways_to_beat(time, distance) end)
+    |> Enum.reduce(1, &Kernel.*/2)
+  end
+
+  def number_of_ways_to_beat(time, distance) do
+    [_, faster, _] =
+      0..time
+      |> Enum.map(&(&1 * (time - &1)))
+      |> Enum.chunk_by(&(&1 > distance))
+
+    Enum.count(faster)
+  end
+end
+```
+
+```elixir
+WaitForIt.number_of_ways_to_beat_multiplied([[46, 214], [80, 1177], [78, 1402], [66, 1024]])
+# 512_295
+```
