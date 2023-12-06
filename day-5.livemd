@@ -48,17 +48,20 @@ defmodule SeedToLocation do
 
     finder_fn = create_location_finder(mapping_blocks)
 
-    seeds_block
-    |> parse_seeds(mode)
-    |> Enum.map(&finder_fn.(&1))
-    |> Enum.min()
+    first.._ =
+      seeds_block
+      |> parse_seeds(mode)
+      |> finder_fn.()
+      |> Enum.min()
+
+    first
   end
 
   defp create_location_finder(blocks) do
     mappers = Enum.map(blocks, &create_mapper/1)
 
-    fn seed ->
-      for mapper <- mappers, reduce: seed do
+    fn input_ranges ->
+      for mapper <- mappers, reduce: input_ranges do
         acc -> mapper.(acc)
       end
     end
@@ -76,36 +79,80 @@ defmodule SeedToLocation do
       end)
       |> Enum.into(%{})
 
-    fn
-      input when is_integer(input) ->
-        case Enum.filter(rules, fn {range, _} -> input in range end) do
-          [] -> input
-          [{_, offset}] -> input + offset
-        end
-
-      %Range{} = _input ->
-        # TODO doesn't work yet
-        0
-    end
+    fn input_ranges -> Enum.flat_map(input_ranges, &map_range(&1, rules)) end
   end
 
-  defp parse_seeds("seeds: " <> fragment, :seeds_as_is), do: parse_numbers(fragment)
+  defp map_range(input_range, rules) do
+    # 1. process rules
+    result =
+      Enum.reduce(rules, %{}, fn {rule_range, rule_offset}, acc ->
+        unless Range.disjoint?(rule_range, input_range) do
+          Map.put(acc, intersection(input_range, rule_range), rule_offset)
+        else
+          acc
+        end
+      end)
 
-  defp parse_seeds(fragment, :seeds_as_ranges) do
-    fragment
-    |> parse_seeds(:seeds_as_is)
-    |> Enum.chunk_every(2)
-    # |> Enum.map(fn [start, length] ->
-    #   start..(start + length - 1)
-    # end)
-    |> Enum.flat_map(fn [start, length] ->
-      start..(start + length - 1) |> Enum.to_list()
+    # 2. fill in ranges not covered by the rules (offset is 0)
+    result =
+      difference(input_range, Map.keys(result))
+      |> Enum.reduce(result, &Map.put(&2, &1, 0))
+
+    # 3. apply all offsets
+    Enum.map(result, fn {range, offset} -> Range.shift(range, offset) end)
+  end
+
+  defp intersection(range_1, range_2),
+    do: max(range_1.first, range_2.first)..min(range_1.last, range_2.last)
+
+  def difference(range, ranges_to_subtract) when is_list(ranges_to_subtract) do
+    Enum.reduce(ranges_to_subtract, [range], fn to_subtract, acc ->
+      Enum.flat_map(acc, &difference(&1, to_subtract))
+      |> Enum.reject(&(&1 == ..))
     end)
   end
 
-  defp parse_numbers(fragment) do
-    String.split(fragment) |> Enum.map(&String.to_integer/1)
+  def difference(range_1, range_2) do
+    unless Range.disjoint?(range_1, range_2) do
+      intersection = intersection(range_1, range_2)
+
+      []
+      |> then(fn result ->
+        if intersection.first > range_1.first do
+          [range_1.first..(intersection.first - 1) | result]
+        else
+          result
+        end
+      end)
+      |> then(fn result ->
+        if intersection.last < range_1.last do
+          [(intersection.last + 1)..range_1.last | result]
+        else
+          result
+        end
+      end)
+    else
+      [range_1]
+    end
   end
+
+  defp parse_seeds("seeds: " <> fragment, mode) do
+    numbers = parse_numbers(fragment)
+
+    case mode do
+      :seeds_as_ranges ->
+        numbers
+        |> Enum.chunk_every(2)
+        |> Enum.map(fn [start, length] ->
+          start..(start + length - 1)
+        end)
+
+      :seeds_as_is ->
+        Enum.map(numbers, &(&1..&1))
+    end
+  end
+
+  defp parse_numbers(fragment), do: String.split(fragment) |> Enum.map(&String.to_integer/1)
 end
 ```
 
@@ -134,5 +181,5 @@ Path.join(__DIR__, "day-5.input")
 |> File.read!()
 |> SeedToLocation.find_lowest_locations(:seeds_as_ranges)
 
-# TODO this takes forever (no result yet)!
+# 1493866
 ```
