@@ -2,26 +2,54 @@
 
 ## Part one
 
+I didn't parse the input, since it was so simple. Just smashed it into the code here... 🤷🏼‍♂️
+
+```elixir
+input_part_one = [[46, 214], [80, 1177], [78, 1402], [66, 1024]]
+```
+
 ```elixir
 defmodule WaitForIt do
   def number_of_ways_to_beat_multiplied(races) do
     races
-    |> Enum.map(fn [time, distance] -> number_of_ways_to_beat(time, distance) end)
+    |> Stream.map(fn [time, distance] -> number_of_ways_to_beat(time, distance) end)
     |> Enum.reduce(1, &Kernel.*/2)
   end
 
   def number_of_ways_to_beat(time, distance) do
-    [_, faster, _] =
-      0..time
-      |> Enum.map(&(&1 * (time - &1)))
-      |> Enum.chunk_by(&(&1 > distance))
-
-    Enum.count(faster)
+    0..time
+    |> Stream.map(&(&1 * (time - &1)))
+    |> Stream.filter(&(&1 > distance))
+    |> Enum.count()
   end
 end
 ```
 
 ```elixir
-WaitForIt.number_of_ways_to_beat_multiplied([[46, 214], [80, 1177], [78, 1402], [66, 1024]])
+WaitForIt.number_of_ways_to_beat_multiplied(input_part_one)
 # 512_295
 ```
+
+## Part two
+
+```elixir
+input_part_two = [[46_807_866, 214_117_714_021_024]]
+```
+
+```elixir
+WaitForIt.number_of_ways_to_beat_multiplied(input_part_two)
+# 36_530_883
+```
+
+... or solve the quadratic equation:
+
+> d = x * (t - x) => -x^2 + tx - d = 0
+
+this equation has two roots, for d = 46_807_866 and t = 214_117_714_021_024:
+
+* 5_138_491.2
+* 41_669_374.8
+
+considering all points in-between need to be integers, this gives this amount of possibilities to beat the target distance:
+
+41_669_375 - 5_138_492 = 36_530_883
