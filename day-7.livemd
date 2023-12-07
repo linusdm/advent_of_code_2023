@@ -15,7 +15,8 @@ sample_input =
 
 ```elixir
 defmodule CamelCards do
-  def total_winnings(hands) do
+  def total_winnings(hands, mode \\ :jokers_are_not_special)
+      when mode in [:jokers_are_special, :jokers_are_not_special] do
     hands
     |> String.split("\n", trim: true)
     |> Enum.map(fn <<hand::binary-size(5), " ", bid::binary>> ->
@@ -23,9 +24,7 @@ defmodule CamelCards do
     end)
     |> Enum.sort_by(
       fn {hand, _} ->
-        one = collatable_type(hand)
-        two = collatable_strength(hand)
-        {one, two}
+        {collatable_type(hand, mode), collatable_strength(hand, mode)}
       end,
       :desc
     )
@@ -37,14 +36,28 @@ defmodule CamelCards do
                           |> Enum.with_index()
                           |> Enum.into(%{})
 
-  defp collatable_type(hand) do
+  defp collatable_type(hand, mode) do
+    hand = to_charlist(hand)
+
+    {maybe_jokers, rest_of_hand} =
+      case mode do
+        :jokers_are_special -> Enum.split_with(hand, &(&1 == ?J))
+        _ -> {[], hand}
+      end
+
     type =
-      hand
-      |> to_charlist()
+      rest_of_hand
       |> Enum.sort()
       |> Enum.chunk_by(& &1)
       |> Enum.map(&length(&1))
       |> Enum.sort(:desc)
+      |> then(fn
+        [first | rest] ->
+          [first + length(maybe_jokers) | rest]
+
+        [] ->
+          [length(maybe_jokers)]
+      end)
       |> case do
         [5] -> :five_of_a_kind
         [4, 1] -> :four_of_a_kind
@@ -62,10 +75,20 @@ defmodule CamelCards do
                               |> Enum.with_index()
                               |> Enum.map(fn {c, idx} -> {c, ?A + idx} end)
                               |> Enum.into(%{})
-  defp collatable_strength(hand) do
+
+  @strength_collation_mapping_jokers_are_special ~c(AKQT98765432J)
+                                                 |> Enum.with_index()
+                                                 |> Enum.map(fn {c, idx} -> {c, ?A + idx} end)
+                                                 |> Enum.into(%{})
+  defp collatable_strength(hand, mode) do
     hand
     |> to_charlist()
-    |> Enum.map(&@strength_collation_mapping[&1])
+    |> Enum.map(fn c ->
+      case mode do
+        :jokers_are_special -> @strength_collation_mapping_jokers_are_special[c]
+        _ -> @strength_collation_mapping[c]
+      end
+    end)
   end
 end
 ```
@@ -86,5 +109,14 @@ Path.join(__DIR__, "day-7.input")
 ## Part two
 
 ```elixir
+CamelCards.total_winnings(sample_input, :jokers_are_special)
+# expected: 5905
+```
 
+```elixir
+Path.join(__DIR__, "day-7.input")
+|> File.read!()
+|> CamelCards.total_winnings(:jokers_are_special)
+
+#
 ```
