@@ -1,0 +1,90 @@
+# Day 7: Camel Cards
+
+## Part one
+
+```elixir
+sample_input =
+  """
+  32T3K 765
+  T55J5 684
+  KK677 28
+  KTJJT 220
+  QQQJA 483
+  """
+```
+
+```elixir
+defmodule CamelCards do
+  def total_winnings(hands) do
+    hands
+    |> String.split("\n", trim: true)
+    |> Enum.map(fn <<hand::binary-size(5), " ", bid::binary>> ->
+      {hand, String.to_integer(bid)}
+    end)
+    |> Enum.sort_by(
+      fn {hand, _} ->
+        one = collatable_type(hand)
+        two = collatable_strength(hand)
+        {one, two}
+      end,
+      :desc
+    )
+    |> Enum.with_index(1)
+    |> Enum.reduce(0, fn {{_hand, bid}, rank}, acc -> acc + bid * rank end)
+  end
+
+  @type_collation_mapping ~w(five_of_a_kind four_of_a_kind full_house three_of_a_kind two_pair one_pair high_card)a
+                          |> Enum.with_index()
+                          |> Enum.into(%{})
+
+  defp collatable_type(hand) do
+    type =
+      hand
+      |> to_charlist()
+      |> Enum.sort()
+      |> Enum.chunk_by(& &1)
+      |> Enum.map(&length(&1))
+      |> Enum.sort(:desc)
+      |> case do
+        [5] -> :five_of_a_kind
+        [4, 1] -> :four_of_a_kind
+        [3, 2] -> :full_house
+        [3, 1, 1] -> :three_of_a_kind
+        [2, 2, 1] -> :two_pair
+        [2, 1, 1, 1] -> :one_pair
+        [1, 1, 1, 1, 1] -> :high_card
+      end
+
+    @type_collation_mapping[type]
+  end
+
+  @strength_collation_mapping ~c(AKQJT98765432)
+                              |> Enum.with_index()
+                              |> Enum.map(fn {c, idx} -> {c, ?A + idx} end)
+                              |> Enum.into(%{})
+  defp collatable_strength(hand) do
+    hand
+    |> to_charlist()
+    |> Enum.map(&@strength_collation_mapping[&1])
+  end
+end
+```
+
+```elixir
+CamelCards.total_winnings(sample_input)
+# expected: 6440
+```
+
+```elixir
+Path.join(__DIR__, "day-7.input")
+|> File.read!()
+|> CamelCards.total_winnings()
+
+# 251106089
+```
+
+## Part two
+
+```elixir
+
+```
