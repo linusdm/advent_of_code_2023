@@ -1,0 +1,138 @@
+# Day 8: Haunted Wasteland
+
+## Part one
+
+```elixir
+sample_input =
+  """
+  RL
+
+  AAA = (BBB, CCC)
+  BBB = (DDD, EEE)
+  CCC = (ZZZ, GGG)
+  DDD = (DDD, DDD)
+  EEE = (EEE, EEE)
+  GGG = (GGG, GGG)
+  ZZZ = (ZZZ, ZZZ)
+  """
+```
+
+```elixir
+sample_input_2 =
+  """
+  LLR
+
+  AAA = (BBB, BBB)
+  BBB = (AAA, ZZZ)
+  ZZZ = (ZZZ, ZZZ)
+  """
+```
+
+```elixir
+defmodule HauntedWasteland do
+  def steps_to_reach_zzz(maps) do
+    {tree, instructions} = parse_input(maps)
+    path_to_exit(tree, instructions)
+  end
+
+  def steps_to_reach_ghost_z(maps) do
+    {tree, instructions} = parse_input(maps)
+    path_to_exit_with_ghosts(tree, instructions)
+  end
+
+  defp parse_input(maps) do
+    [instructions, tree_spec] = String.split(maps, "\n\n", trim: true)
+    instructions = String.split(instructions, "", trim: true)
+    tree = to_tree(tree_spec)
+    {tree, instructions}
+  end
+
+  defp to_tree(spec) do
+    spec
+    |> String.split("\n", trim: true)
+    |> Enum.map(fn <<src::binary-3, " = (", left::binary-3, ", ", right::binary-3, ")">> ->
+      {src, %{"L" => left, "R" => right}}
+    end)
+    |> Enum.into(%{})
+  end
+
+  defp path_to_exit(tree, instructions) do
+    path_to_exit(tree, instructions, ["AAA"], 0, fn [node] ->
+      node == "ZZZ"
+    end)
+  end
+
+  defp path_to_exit_with_ghosts(tree, instructions) do
+    start_nodes = tree |> Map.keys() |> Enum.filter(&match?(<<_::binary-2, "A">>, &1))
+
+    path_to_exit(tree, instructions, start_nodes, 0, fn nodes ->
+      Enum.all?(nodes, &match?(<<_::binary-2, "Z">>, &1))
+    end)
+  end
+
+  defp path_to_exit(tree, [first | rest] = _instructions, nodes, steps, stop_cond) do
+    next_nodes = Enum.map(nodes, &tree[&1][first])
+
+    if stop_cond.(next_nodes) do
+      steps + 1
+    else
+      next_instructions = rest ++ [first]
+      path_to_exit(tree, next_instructions, next_nodes, steps + 1, stop_cond)
+    end
+  end
+end
+```
+
+```elixir
+HauntedWasteland.steps_to_reach_zzz(sample_input)
+# expected 2
+```
+
+```elixir
+HauntedWasteland.steps_to_reach_zzz(sample_input_2)
+# expected 6
+```
+
+```elixir
+Path.join(__DIR__, "day-8.input")
+|> File.read!()
+|> HauntedWasteland.steps_to_reach_zzz()
+
+# 12169
+```
+
+## Part two
+
+```elixir
+sample_input_part_two =
+  """
+  LR
+
+  11A = (11B, XXX)
+  11B = (XXX, 11Z)
+  11Z = (11B, XXX)
+  22A = (22B, XXX)
+  22B = (22C, 22C)
+  22C = (22Z, 22Z)
+  22Z = (22B, 22B)
+  XXX = (XXX, XXX)
+  """
+```
+
+```elixir
+HauntedWasteland.steps_to_reach_ghost_z(sample_input_part_two)
+# expected 6
+```
+
+```elixir
+["HNZ", "NDZ", "GSZ", "SNZ", "TMZ", "VXZ"]
+|> Enum.all?(&match?(<<_::binary-2, "Z">>, &1))
+```
+
+```elixir
+Path.join(__DIR__, "day-8.input")
+|> File.read!()
+|> HauntedWasteland.steps_to_reach_ghost_z()
+
+# ?
+```
