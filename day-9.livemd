@@ -1,0 +1,75 @@
+# Day 9: Mirage Maintenance
+
+## Part one
+
+```elixir
+sample_input =
+  """
+  0 3 6 9 12 15
+  1 3 6 10 15 21
+  10 13 16 21 30 45
+  """
+```
+
+```elixir
+defmodule MirageMaintenance do
+  def sum_extrapolated_values(report) do
+    report
+    |> parse_report()
+    |> Enum.map(&extrapolate/1)
+    |> Enum.sum()
+  end
+
+  defp parse_report(report) do
+    report
+    |> String.split("\n", trim: true)
+    |> Enum.map(fn line ->
+      String.split(line, " ", trim: true) |> Enum.map(&String.to_integer/1)
+    end)
+  end
+
+  defp extrapolate(numbers) do
+    [[result | _] | _] =
+      [Enum.reverse(numbers)]
+      |> build_rows()
+      |> extrapolate_rows()
+
+    result
+  end
+
+  defp extrapolate_rows([all_zero_row | rest]) do
+    Enum.reduce(rest, [[0 | all_zero_row]], fn [curr | _] = row, [[prev | _] | _] = acc ->
+      [[prev + curr | row] | acc]
+    end)
+  end
+
+  defp build_rows([last_row | _] = rows) do
+    if Enum.all?(last_row, &(&1 == 0)) do
+      rows
+    else
+      [first | rest] = last_row
+
+      {_, new_row} =
+        Enum.reduce(rest, {first, []}, fn number, {previous, acc} ->
+          {number, [previous - number | acc]}
+        end)
+
+      [Enum.reverse(new_row) | rows]
+      |> build_rows()
+    end
+  end
+end
+```
+
+```elixir
+MirageMaintenance.sum_extrapolated_values(sample_input)
+# expect 114
+```
+
+```elixir
+Path.join(__DIR__, "day-9.input")
+|> File.read!()
+|> MirageMaintenance.sum_extrapolated_values()
+
+# 1853145119
+```
