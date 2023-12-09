@@ -29,22 +29,15 @@ defmodule MirageMaintenance do
   end
 
   defp extrapolate(numbers, mode) do
-    [[result | _] | _] =
-      case mode do
-        :forward -> [Enum.reverse(numbers)]
-        :backward -> [numbers]
-      end
-      |> build_rows()
-      |> extrapolate_rows()
-
-    result
+    case mode do
+      :forward -> [Enum.reverse(numbers)]
+      :backward -> [numbers]
+    end
+    |> build_rows()
+    |> extrapolate_rows()
   end
 
-  defp extrapolate_rows([all_zero_row | rest]) do
-    Enum.reduce(rest, [[0 | all_zero_row]], fn [curr | _] = row, [[prev | _] | _] = acc ->
-      [[prev + curr | row] | acc]
-    end)
-  end
+  defp extrapolate_rows(rows), do: rows |> Enum.map(&hd/1) |> Enum.sum()
 
   defp build_rows([last_row | _] = rows) do
     if Enum.all?(last_row, &(&1 == 0)) do
