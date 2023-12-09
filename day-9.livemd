@@ -13,10 +13,10 @@ sample_input =
 
 ```elixir
 defmodule MirageMaintenance do
-  def sum_extrapolated_values(report) do
+  def sum_extrapolated_values(report, mode \\ :forward) when mode in ~w(forward backward)a do
     report
     |> parse_report()
-    |> Enum.map(&extrapolate/1)
+    |> Enum.map(fn report -> extrapolate(report, mode) end)
     |> Enum.sum()
   end
 
@@ -28,9 +28,12 @@ defmodule MirageMaintenance do
     end)
   end
 
-  defp extrapolate(numbers) do
+  defp extrapolate(numbers, mode) do
     [[result | _] | _] =
-      [Enum.reverse(numbers)]
+      case mode do
+        :forward -> [Enum.reverse(numbers)]
+        :backward -> [numbers]
+      end
       |> build_rows()
       |> extrapolate_rows()
 
@@ -63,7 +66,7 @@ end
 
 ```elixir
 MirageMaintenance.sum_extrapolated_values(sample_input)
-# expect 114
+# expected 114
 ```
 
 ```elixir
@@ -72,4 +75,20 @@ Path.join(__DIR__, "day-9.input")
 |> MirageMaintenance.sum_extrapolated_values()
 
 # 1853145119
+```
+
+## Part two
+
+```elixir
+MirageMaintenance.sum_extrapolated_values(sample_input, :backward)
+
+# expected 2
+```
+
+```elixir
+Path.join(__DIR__, "day-9.input")
+|> File.read!()
+|> MirageMaintenance.sum_extrapolated_values(:backward)
+
+# 923
 ```
