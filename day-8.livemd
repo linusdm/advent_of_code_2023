@@ -66,7 +66,7 @@ defmodule HauntedWasteland do
     |> Enum.map(fn start_node ->
       path_to_exit(tree, instructions, start_node, 0, &match?(<<_::binary-2, "Z">>, &1))
     end)
-    |> lcd()
+    |> lcm()
   end
 
   defp path_to_exit(tree, [first | rest] = _instructions, node, steps, stop_cond) do
@@ -80,11 +80,11 @@ defmodule HauntedWasteland do
     end
   end
 
-  defp lcd([a]), do: a
+  defp lcm([a]), do: a
 
-  defp lcd([a, b | rest]), do: lcd([lcd(a, b) | rest])
+  defp lcm([a, b | rest]), do: lcm([lcm(a, b) | rest])
 
-  defp lcd(a, b), do: (a * b) |> div(Integer.gcd(a, b))
+  defp lcm(a, b), do: (a * b) |> div(Integer.gcd(a, b))
 end
 ```
 
