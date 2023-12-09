@@ -50,14 +50,12 @@ defmodule MirageMaintenance do
     if Enum.all?(last_row, &(&1 == 0)) do
       rows
     else
-      [first | rest] = last_row
+      new_row =
+        last_row
+        |> Enum.chunk_every(2, 1, :discard)
+        |> Enum.map(fn [a, b] -> a - b end)
 
-      {_, new_row} =
-        Enum.reduce(rest, {first, []}, fn number, {previous, acc} ->
-          {number, [previous - number | acc]}
-        end)
-
-      [Enum.reverse(new_row) | rows]
+      [new_row | rows]
       |> build_rows()
     end
   end
