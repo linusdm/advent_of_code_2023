@@ -56,30 +56,35 @@ defmodule HauntedWasteland do
     |> Enum.into(%{})
   end
 
-  defp path_to_exit(tree, instructions) do
-    path_to_exit(tree, instructions, ["AAA"], 0, fn [node] ->
-      node == "ZZZ"
-    end)
-  end
+  defp path_to_exit(tree, instructions),
+    do: path_to_exit(tree, instructions, "AAA", 0, &(&1 == "ZZZ"))
 
   defp path_to_exit_with_ghosts(tree, instructions) do
-    start_nodes = tree |> Map.keys() |> Enum.filter(&match?(<<_::binary-2, "A">>, &1))
-
-    path_to_exit(tree, instructions, start_nodes, 0, fn nodes ->
-      Enum.all?(nodes, &match?(<<_::binary-2, "Z">>, &1))
+    tree
+    |> Map.keys()
+    |> Enum.filter(&match?(<<_::binary-2, "A">>, &1))
+    |> Enum.map(fn start_node ->
+      path_to_exit(tree, instructions, start_node, 0, &match?(<<_::binary-2, "Z">>, &1))
     end)
+    |> lcd()
   end
 
-  defp path_to_exit(tree, [first | rest] = _instructions, nodes, steps, stop_cond) do
-    next_nodes = Enum.map(nodes, &tree[&1][first])
+  defp path_to_exit(tree, [first | rest] = _instructions, node, steps, stop_cond) do
+    next_node = tree[node][first]
 
-    if stop_cond.(next_nodes) do
+    if stop_cond.(next_node) do
       steps + 1
     else
       next_instructions = rest ++ [first]
-      path_to_exit(tree, next_instructions, next_nodes, steps + 1, stop_cond)
+      path_to_exit(tree, next_instructions, next_node, steps + 1, stop_cond)
     end
   end
+
+  defp lcd([a]), do: a
+
+  defp lcd([a, b | rest]), do: lcd([lcd(a, b) | rest])
+
+  defp lcd(a, b), do: (a * b) |> div(Integer.gcd(a, b))
 end
 ```
 
@@ -125,14 +130,9 @@ HauntedWasteland.steps_to_reach_ghost_z(sample_input_part_two)
 ```
 
 ```elixir
-["HNZ", "NDZ", "GSZ", "SNZ", "TMZ", "VXZ"]
-|> Enum.all?(&match?(<<_::binary-2, "Z">>, &1))
-```
-
-```elixir
 Path.join(__DIR__, "day-8.input")
 |> File.read!()
 |> HauntedWasteland.steps_to_reach_ghost_z()
 
-# ?
+# 12030780859469
 ```
