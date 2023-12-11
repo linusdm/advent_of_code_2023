@@ -1,0 +1,130 @@
+# Day 10: Pipe Maze
+
+## Part one
+
+```elixir
+sample_input_1 =
+  """
+  -L|F7
+  7S-7|
+  L|7||
+  -L-J|
+  L|-JF
+  """
+
+sample_input_2 =
+  """
+  7-F7-
+  .FJ|7
+  SJLL7
+  |F--J
+  LJ.LJ
+  """
+```
+
+```elixir
+defmodule PipeMaze do
+  def number_of_steps_to_farthest_point(input) do
+    map = parse_map(input)
+    initial_paths = get_initial_paths(map)
+    number_of_steps_farthest_from(map, initial_paths)
+  end
+
+  defp get_initial_paths(map) do
+    start_location = get_start_location(map)
+
+    start_location
+    |> get_neighbours(map)
+    |> Enum.filter(&(start_location in get_reachable_neighbours(map, &1)))
+    |> Enum.map(&[&1, start_location])
+  end
+
+  @neighbour_offsets [{-1, 0}, {0, 1}, {1, 0}, {0, -1}]
+
+  defp get_neighbours(location, map) do
+    @neighbour_offsets
+    |> Enum.map(&apply_offset(location, &1))
+    |> Enum.filter(&is_within_bounds?(&1, map))
+  end
+
+  defp is_within_bounds?({row, col}, map),
+    do: row >= 0 and row <= length(map) and col >= 0 and col <= length(hd(map))
+
+  defp number_of_steps_farthest_from(map, paths_followed) do
+    [first_path, second_path] = new_paths = Enum.map(paths_followed, &advance_path(map, &1))
+
+    cond do
+      hd(first_path) == hd(second_path) -> length(first_path) - 1
+      hd(first_path) in second_path -> length(first_path) - 2
+      true -> number_of_steps_farthest_from(map, new_paths)
+    end
+  end
+
+  @direction_offsets %{
+    "J" => [{0, -1}, {-1, 0}],
+    "7" => [{0, -1}, {1, 0}],
+    "L" => [{-1, 0}, {0, 1}],
+    "F" => [{1, 0}, {0, 1}],
+    "-" => [{0, -1}, {0, 1}],
+    "|" => [{-1, 0}, {1, 0}],
+    "." => []
+  }
+
+  defp advance_path(map, [last, previous | _] = path) do
+    next = get_reachable_neighbours(map, last) |> Enum.find(&(&1 != previous))
+
+    if next == nil do
+      raise "boom : #{inspect(path)}"
+    end
+
+    [next | path]
+  end
+
+  defp get_reachable_neighbours(map, location) do
+    symbol = get_symbol_at_location(map, location)
+
+    @direction_offsets[symbol]
+    |> Enum.map(&apply_offset(location, &1))
+    |> Enum.filter(&is_within_bounds?(&1, map))
+  end
+
+  defp apply_offset({row, col}, {row_offset, col_offset}),
+    do: {row + row_offset, col + col_offset}
+
+  defp get_start_location(map) do
+    start_row = Enum.find_index(map, &("S" in &1))
+    start_col = Enum.find_index(Enum.at(map, start_row), &(&1 == "S"))
+    {start_row, start_col}
+  end
+
+  defp parse_map(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&String.split(&1, "", trim: true))
+  end
+
+  defp get_symbol_at_location(map, {row, col}), do: map |> Enum.at(row) |> Enum.at(col)
+end
+```
+
+```elixir
+PipeMaze.number_of_steps_to_farthest_point(sample_input_1)
+# expected 4
+```
+
+```elixir
+PipeMaze.number_of_steps_to_farthest_point(sample_input_2)
+# expected 8
+```
+
+```elixir
+Path.join(__DIR__, "day-10.input")
+|> File.read!()
+|> PipeMaze.number_of_steps_to_farthest_point()
+
+# ?
+```
+
+```elixir
+
+```
