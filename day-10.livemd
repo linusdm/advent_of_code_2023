@@ -26,17 +26,24 @@ sample_input_2 =
 defmodule PipeMaze do
   def number_of_steps_to_farthest_point(input) do
     map = parse_map(input)
-    initial_paths = get_initial_paths(map)
-    number_of_steps_farthest_from(map, initial_paths)
+
+    [_, start_location] = initial_path = get_initial_path(map)
+
+    initial_path
+    |> find_loop_path(start_location, map)
+    |> length()
+    |> div(2)
   end
 
-  defp get_initial_paths(map) do
+  defp get_initial_path(map) do
     start_location = get_start_location(map)
 
-    start_location
-    |> get_neighbours(map)
-    |> Enum.filter(&(start_location in get_reachable_neighbours(map, &1)))
-    |> Enum.map(&[&1, start_location])
+    [connected_location_1, _connected_location_2] =
+      start_location
+      |> get_neighbours(map)
+      |> Enum.filter(&(start_location in get_reachable_neighbours(map, &1)))
+
+    [connected_location_1, start_location]
   end
 
   @neighbour_offsets [{-1, 0}, {0, 1}, {1, 0}, {0, -1}]
@@ -50,13 +57,12 @@ defmodule PipeMaze do
   defp is_within_bounds?({row, col}, map),
     do: row >= 0 and row <= length(map) and col >= 0 and col <= length(hd(map))
 
-  defp number_of_steps_farthest_from(map, paths_followed) do
-    [first_path, second_path] = new_paths = Enum.map(paths_followed, &advance_path(map, &1))
+  defp find_loop_path(acc_path, start_location, map) do
+    [hd | rest] = new_path = advance_path(map, acc_path)
 
-    cond do
-      hd(first_path) == hd(second_path) -> length(first_path) - 1
-      hd(first_path) in second_path -> length(first_path) - 2
-      true -> number_of_steps_farthest_from(map, new_paths)
+    case hd do
+      ^start_location -> rest
+      _ -> find_loop_path(new_path, start_location, map)
     end
   end
 
@@ -72,11 +78,6 @@ defmodule PipeMaze do
 
   defp advance_path(map, [last, previous | _] = path) do
     next = get_reachable_neighbours(map, last) |> Enum.find(&(&1 != previous))
-
-    if next == nil do
-      raise "boom : #{inspect(path)}"
-    end
-
     [next | path]
   end
 
@@ -122,9 +123,7 @@ Path.join(__DIR__, "day-10.input")
 |> File.read!()
 |> PipeMaze.number_of_steps_to_farthest_point()
 
-# ?
+# 7173
 ```
 
-```elixir
-
-```
+## Part two
