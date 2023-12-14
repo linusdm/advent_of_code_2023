@@ -1,0 +1,111 @@
+# Day 11: Cosmic Expansion
+
+## Part one
+
+```elixir
+sample_input =
+  """
+  ...#......
+  .......#..
+  #.........
+  ..........
+  ......#...
+  .#........
+  .........#
+  ..........
+  .......#..
+  #...#.....
+  """
+```
+
+```elixir
+defmodule CosmicExpansion do
+  def sum_of_shortest_paths_in_expanded_universe(input, expansion \\ 2) do
+    input
+    |> get_galaxy_locations()
+    |> expand_universe(expansion)
+    |> sum_shortest_paths_between_pairs()
+  end
+
+  defp get_galaxy_locations(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(fn line ->
+      line
+      |> String.split("", trim: true)
+      |> Enum.with_index()
+      |> Enum.filter(fn {symbol, _col} -> symbol == "#" end)
+      |> Enum.map(&elem(&1, 1))
+    end)
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {cols, row} ->
+      cols |> Enum.map(&{row, &1})
+    end)
+  end
+
+  defp expand_universe(locations, expansion) do
+    [0, 1]
+    |> Enum.map(fn axis -> {axis, Enum.map(locations, &elem(&1, axis)) |> Enum.max()} end)
+    |> Enum.reduce(locations, fn {axis, max}, acc ->
+      0..(max - 1)
+      |> Enum.filter(&no_galaxies_on_axis(acc, &1, axis))
+      |> Enum.with_index()
+      |> Enum.map(fn {i, j} -> i + j * (expansion - 1) end)
+      |> Enum.reduce(acc, fn i, acc -> expand_axis(acc, i, axis, expansion) end)
+    end)
+  end
+
+  defp no_galaxies_on_axis(locations, i, axis),
+    do: Enum.filter(locations, &(elem(&1, axis) == i)) == []
+
+  defp expand_axis(locations, i, axis, expansion) do
+    Enum.map(locations, fn location ->
+      if elem(location, axis) > i do
+        put_elem(location, axis, elem(location, axis) + (expansion - 1))
+      else
+        location
+      end
+    end)
+  end
+
+  defp sum_shortest_paths_between_pairs(locations) do
+    for loc_1 <- locations, loc_2 <- locations, loc_1 > loc_2 do
+      abs(elem(loc_1, 0) - elem(loc_2, 0)) + abs(elem(loc_1, 1) - elem(loc_2, 1))
+    end
+    |> Enum.sum()
+  end
+end
+```
+
+```elixir
+CosmicExpansion.sum_of_shortest_paths_in_expanded_universe(sample_input)
+# expected 374
+```
+
+```elixir
+Path.join(__DIR__, "day-11.input")
+|> File.read!()
+|> CosmicExpansion.sum_of_shortest_paths_in_expanded_universe()
+
+# 10292708
+```
+
+## Part two
+
+```elixir
+CosmicExpansion.sum_of_shortest_paths_in_expanded_universe(sample_input, 10)
+# expected 1030
+```
+
+```elixir
+CosmicExpansion.sum_of_shortest_paths_in_expanded_universe(sample_input, 100)
+# expected 8410
+```
+
+```elixir
+Path.join(__DIR__, "day-11.input")
+|> File.read!()
+|> CosmicExpansion.sum_of_shortest_paths_in_expanded_universe(1_000_000)
+
+# 790194712336
+```
