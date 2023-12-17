@@ -15,7 +15,33 @@ sample_input =
 ```
 
 ```elixir
-10 |> Integer.to_string(2) |> String.split("", trim: true)
+defmodule Combinations do
+  def create({_a, _b} = elements, total_count, a_count) when total_count >= a_count do
+    create_rec([], elements, total_count, a_count)
+    |> Enum.uniq()
+  end
+
+  defp create_rec(combination_builder, {a, _b} = _elements, total_count, a_count)
+       when length(combination_builder) == total_count do
+    case Enum.count(combination_builder, &(&1 == a)) do
+      ^a_count -> [combination_builder]
+      current_a_count when current_a_count < a_count -> []
+    end
+  end
+
+  defp create_rec(combination_builder, {a, b} = elements, total_count, a_count)
+       when length(combination_builder) < total_count do
+    case Enum.count(combination_builder, &(&1 == a)) do
+      ^a_count ->
+        [List.duplicate(b, total_count - length(combination_builder)) ++ combination_builder]
+
+      current_a_count when current_a_count < a_count ->
+        elements
+        |> Tuple.to_list()
+        |> Enum.flat_map(&create_rec([&1 | combination_builder], elements, total_count, a_count))
+    end
+  end
+end
 ```
 
 ```elixir
@@ -32,25 +58,19 @@ defmodule HotSprings do
 
     groups = groups |> String.split(",") |> Enum.map(&String.to_integer/1)
     unknown_count = damaged_spring_list |> String.to_charlist() |> Enum.count(&(&1 == ??))
+    known_damaged_count = damaged_spring_list |> String.to_charlist() |> Enum.count(&(&1 == ?#))
+    missing_damaged_count = Enum.sum(groups) - known_damaged_count
 
-    0..(Integer.pow(2, unknown_count) - 1)
-    |> Enum.count(fn nr ->
+    Combinations.create({"#", "."}, unknown_count, missing_damaged_count)
+    |> Enum.count(fn combination ->
       damaged_spring_list
-      |> merge_into(nr, unknown_count)
+      |> merge_into(combination)
       |> complies?(groups)
     end)
   end
 
-  defp merge_into(damaged_spring_spec, nr, unknown_count) do
-    nr
-    |> Integer.to_string(2)
-    |> String.pad_leading(unknown_count, "0")
-    |> String.split("", trim: true)
-    |> Enum.map(fn
-      "0" -> "#"
-      "1" -> "."
-    end)
-    |> Enum.reduce(damaged_spring_spec, fn replacement, acc ->
+  defp merge_into(damaged_spring_spec, combination) do
+    Enum.reduce(combination, damaged_spring_spec, fn replacement, acc ->
       String.replace(acc, "?", replacement, global: false)
     end)
   end
@@ -79,5 +99,5 @@ Path.join(__DIR__, "day-12.input")
 |> HotSprings.sum_count_arrangements()
 
 # 6827
-# this is slooooooooow (70 seconds)
+# dammit, this is still slow (with less combinations) (10 seconds)
 ```
